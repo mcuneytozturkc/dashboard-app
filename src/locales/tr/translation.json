@@ -23,6 +23,7 @@
   "chart_generation_error": "Grafik oluşturulurken hata oluştu. Lütfen tekrar deneyin.",
   "chart_not_available": "Grafik mevcut değil. Lütfen önce bir dosya yükleyin.",
   "download_chart": "Şablon İndir",
+  "download_chart_png": "Grafiği PNG Olarak İndir",
   "download_chart_success": "Grafik başarıyla indirildi!",
   "download_chart_error": "Grafik indirilirken hata oluştu. Lütfen tekrar deneyin.",
   "choose_chart_type": "Grafik Tipi Seçin",

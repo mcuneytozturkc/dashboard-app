@@ -24,6 +24,7 @@
   "chart_generation_error": "Error generating chart. Please try again.",
   "chart_not_available": "Chart not available. Please upload a file first.",
   "download_chart": "Download Example",
+  "download_chart_png": "Download Chart as PNG",
   "download_chart_success": "Chart downloaded successfully!",
   "download_chart_error": "Error downloading chart. Please try again.",
   "choose_chart_type": "Choose Chart Type",

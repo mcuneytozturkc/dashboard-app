@@ -45,6 +45,23 @@ export default function ExcelToChartPage() {
         const file = e.target.files?.[0];
         if (file) setSelectedFile(file);
     };
+    const chartRef = useRef<any>(null);
+
+    const handleDownloadChart = () => {
+        if (!chartRef.current) return;
+        const chartInstance = chartRef.current;
+        const canvas = chartInstance.canvas || chartInstance.canvasEl;
+        if (canvas && canvas.toDataURL) {
+            const url = canvas.toDataURL("image/png");
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "chart.png";
+            a.click();
+        } else {
+            alert("Grafik bulunamadı!");
+        }
+    };
+
 
     // Chart oluşturma
     const handleCreateChart = async () => {
@@ -129,6 +146,15 @@ export default function ExcelToChartPage() {
                 >
                     {loading ? t("file_processing") : t("generate_chart")}
                 </button>
+                {chartData && (
+                    <button
+                        className="ml-0 sm:ml-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+                        disabled={loading}
+                        onClick={handleDownloadChart}
+                    >
+                        {loading ? t("file_processing") : t("download_chart_png")}
+                    </button>
+                )}
             </div>
 
             {message && (
@@ -137,10 +163,13 @@ export default function ExcelToChartPage() {
                 </div>
             )}
 
+
+
             {/* Grafik Önizleme */}
             <div className="bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded p-5 mt-6 w-full h-[350px] flex items-center justify-center transition-colors">
                 <div className="w-full h-full">
                     <ChartPreview
+                        ref={chartRef}
                         chartType={selectedChart}
                         chartData={chartData}
                         noDataText={t("chart_not_available")}
