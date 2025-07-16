@@ -1,0 +1,25 @@
+{
+    "sales": [
+        {
+            "month": "Ocak",
+            "value": 12000
+        },
+        {
+            "month": "Şubat",
+            "value": 15000
+        },
+        {
+            "month": "Mart",
+            "value": 17000
+        },
+        {
+            "month": "Nisan",
+            "value": 14000
+        }
+    ],
+    "summary": {
+        "totalUsers": 1500,
+        "activeUsers": 1240,
+        "monthlyRevenue": 48000
+    }
+}

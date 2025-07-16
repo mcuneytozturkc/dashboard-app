@@ -1,0 +1,20 @@
+{
+  "home": "Startpagina",
+  "projects": "Projecten",
+  "about": "Over Mij",
+  "contact": "Contact",
+  "language": "Taal",
+  "about_title": "Over Mij",
+  "about_description": "Ik ben Cüneyt Öztürk, een gepassioneerde softwareontwikkelaar die end-to-end oplossingen bouwt met een sterke interesse in webtechnologieën. Aan de frontend ontwikkel ik gebruiksvriendelijke interfaces met moderne tools zoals React, Angular en TailwindCSS. Aan de backend schrijf ik betrouwbare en schaalbare services met Spring Boot en Node.js. Met database-technologieën zoals Oracle SQL en PL/SQL bouw ik datagedreven systemen op een solide basis. In elk project hecht ik veel waarde aan codekwaliteit, prestaties en gebruikservaring. Ik ben voortdurend bezig met het leren van nieuwe technologieën en het verbeteren van mezelf met een open instelling. Hoewel ik momenteel nog geen Nederlands spreek, ben ik gemotiveerd om de taal te leren en mijn communicatievaardigheden verder te ontwikkelen.",
+  "hero_greeting_1": "Hallo, ik ben",
+  "hero_name": "Muhsin Cüneyt Öztürk",
+  "hero_description": "Als Full-stack Developer ontwikkel ik gebruiksvriendelijke interfaces, betrouwbare webservices en prestatiegerichte backendsystemen. Ik voer ook efficiëntieverbeteringen uit in SQL-query’s en databasebeheer.",
+  "hero_projects_button": "Bekijk mijn projecten",
+  "hero_cv_button": "Download mijn CV",
+  "contact_title": "Contact",
+  "contact_description": "Je kunt contact met mij opnemen via het onderstaande telefoonnummer of door direct een e-mail te sturen.",
+  "contact_email": "E-mail Versturen",
+  "contact_github_aria": "GitHub",
+  "contact_linkedin_aria": "LinkedIn",
+  "tech_stack": "Angular JS, React JS, Node JS, Spring Boot, Oracle SQL, PL/SQL, PostgreSQL, Tailwind CSS"
+}
