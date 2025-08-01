@@ -7,7 +7,6 @@ interface ChartPreviewProps {
     noDataText?: string;
 }
 
-// forwardRef ile Chart instance'ına erişim sağlıyoruz
 const ChartPreview = forwardRef<any, ChartPreviewProps>(
     ({ chartType, chartData, noDataText = "No chart data" }, ref) => {
         if (!chartData) return <div className="text-gray-500">{noDataText}</div>;
@@ -15,7 +14,7 @@ const ChartPreview = forwardRef<any, ChartPreviewProps>(
         const commonProps = {
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } },
             height: 320,
-            ref, // ref'i buraya verdik!
+            ref,
         };
 
         switch (chartType) {
