@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 
 interface FileDropzoneProps {
@@ -26,7 +26,7 @@ export default function FileDropzone({
   const { t } = useTranslation();
 
   const onDrop = useCallback(
-    (accepted: File[], rejected: { errors: { code: string }[] }[]) => {
+    (accepted: File[], rejected: FileRejection[]) => {
       if (rejected.length > 0) return;
       if (accepted[0]) onFileSelect(accepted[0]);
     },

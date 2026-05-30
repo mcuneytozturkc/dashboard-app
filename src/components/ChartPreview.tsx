@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { Bar, Pie, Line, Scatter, Doughnut } from "react-chartjs-2";
-import type { Chart as ChartJS, ChartDataset, ChartOptions } from "chart.js";
+import type { Chart as ChartJS, ChartData } from "chart.js";
 import type { AppChartData, ChartCustomization } from "../types/chart";
 import { DEFAULT_CUSTOMIZATION } from "../types/chart";
 
@@ -11,25 +11,29 @@ interface ChartPreviewProps {
   customization?: ChartCustomization;
 }
 
-function buildOptions(chartType: string, c: ChartCustomization): ChartOptions {
+function buildOptions(chartType: string, c: ChartCustomization) {
   const hasAxes = !["pie", "doughnut"].includes(chartType);
   return {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { display: c.showLegend },
-      title: c.title ? { display: true, text: c.title, font: { size: 15 } } : { display: false },
+      title: c.title
+        ? { display: true, text: c.title, font: { size: 15 } }
+        : { display: false },
     },
-    scales: hasAxes ? {
-      x: {
-        grid: { display: c.showGrid },
-        title: c.xLabel ? { display: true, text: c.xLabel } : { display: false },
+    ...(hasAxes && {
+      scales: {
+        x: {
+          grid: { display: c.showGrid },
+          ...(c.xLabel && { title: { display: true, text: c.xLabel } }),
+        },
+        y: {
+          grid: { display: c.showGrid },
+          ...(c.yLabel && { title: { display: true, text: c.yLabel } }),
+        },
       },
-      y: {
-        grid: { display: c.showGrid },
-        title: c.yLabel ? { display: true, text: c.yLabel } : { display: false },
-      },
-    } : undefined,
+    }),
   };
 }
 
@@ -45,37 +49,54 @@ function applyColors(data: AppChartData, palette: string[]): AppChartData {
 }
 
 const ChartPreview = forwardRef<ChartJS, ChartPreviewProps>(
-  ({ chartType, chartData, noDataText = "No chart data", customization = DEFAULT_CUSTOMIZATION }, ref) => {
+  (
+    { chartType, chartData, noDataText = "No chart data", customization = DEFAULT_CUSTOMIZATION },
+    ref
+  ) => {
     if (!chartData) return <div className="text-gray-500">{noDataText}</div>;
 
     const colored = applyColors(chartData, customization.colorPalette);
-    const options = buildOptions(chartType, customization);
-    const commonProps = { options, height: 320, ref };
+    const key = chartType + JSON.stringify(chartData);
+
+    // chart.js component generics (ChartOptions<"bar">, ref type ChartJSOrUndefined<"bar">, etc.)
+    // are overly strict for our generic wrapper — cast to any, runtime is correct.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const props = { options: buildOptions(chartType, customization), height: 320, ref } as any;
 
     switch (chartType) {
       case "bar":
-        return <Bar key={chartType + JSON.stringify(chartData)} data={colored} {...commonProps} />;
+        return (
+          <Bar key={key} data={colored as unknown as ChartData<"bar">} {...props} />
+        );
       case "pie":
-        return <Pie key={chartType + JSON.stringify(chartData)} data={colored} {...commonProps} />;
+        return (
+          <Pie key={key} data={colored as unknown as ChartData<"pie">} {...props} />
+        );
       case "line":
-      case "area":
+      case "area": {
+        const lineData = colored as unknown as ChartData<"line">;
         return (
           <Line
-            key={chartType + JSON.stringify(chartData)}
+            key={key}
             data={{
-              ...colored,
-              datasets: colored.datasets.map((ds: ChartDataset) => ({
+              ...lineData,
+              datasets: lineData.datasets.map(ds => ({
                 ...ds,
                 fill: chartType === "area",
               })),
             }}
-            {...commonProps}
+            {...props}
           />
         );
+      }
       case "scatter":
-        return <Scatter key={chartType + JSON.stringify(chartData)} data={colored} {...commonProps} />;
+        return (
+          <Scatter key={key} data={colored as unknown as ChartData<"scatter">} {...props} />
+        );
       case "doughnut":
-        return <Doughnut key={chartType + JSON.stringify(chartData)} data={colored} {...commonProps} />;
+        return (
+          <Doughnut key={key} data={colored as unknown as ChartData<"doughnut">} {...props} />
+        );
       default:
         return null;
     }
