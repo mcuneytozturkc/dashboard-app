@@ -18,8 +18,10 @@ export async function sendContactForm(data: ContactFormData): Promise<void> {
     return;
   }
   await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
-    from_name: data.name,
-    from_email: data.email,
+    from_name: data.name,   // content body: {{from_name}}
+    from_email: data.email, // content body: {{from_email}}
+    name: data.name,        // template "From Name" field: {{name}}
+    email: data.email,      // template "Reply To" field: {{email}}
     message_type: data.type,
     message: data.message,
   }, PUBLIC_KEY);
