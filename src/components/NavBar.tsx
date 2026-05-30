@@ -72,13 +72,14 @@ export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
                     >
                         <option value="en">EN</option>
                         <option value="tr">TR</option>
+                        <option value="nl">NL</option>
                     </select>
                     <button
                         onClick={() => setDarkMode((d: boolean) => !d)}
                         className="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition"
                         title={darkMode ? "Açık Moda Geç" : "Koyu Moda Geç"}
                     >
-                        {darkMode ? "🌙" : "☀️"}
+                        {darkMode ? "☀️" : "🌙"}
                     </button>
 
                 </div>
