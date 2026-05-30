@@ -44,11 +44,6 @@ function applyColors(data: AppChartData, palette: string[]): AppChartData {
   };
 }
 
-// Cast helper — chart.js component generics require specific ChartData<"bar"> etc.
-function asType<T>(data: AppChartData): ChartData<T extends string ? T : never> {
-  return data as unknown as ChartData<T extends string ? T : never>;
-}
-
 const ChartPreview = forwardRef<ChartJS, ChartPreviewProps>(
   ({ chartType, chartData, noDataText = "No chart data", customization = DEFAULT_CUSTOMIZATION }, ref) => {
     if (!chartData) return <div className="text-gray-500">{noDataText}</div>;
@@ -60,18 +55,18 @@ const ChartPreview = forwardRef<ChartJS, ChartPreviewProps>(
 
     switch (chartType) {
       case "bar":
-        return <Bar key={key} data={asType<"bar">(colored)} {...commonProps} />;
+        return <Bar key={key} data={colored as unknown as ChartData<"bar">} {...commonProps} />;
       case "pie":
-        return <Pie key={key} data={asType<"pie">(colored)} {...commonProps} />;
+        return <Pie key={key} data={colored as unknown as ChartData<"pie">} {...commonProps} />;
       case "line":
       case "area": {
-        const lineColored = asType<"line">(colored);
+        const lineData = colored as unknown as ChartData<"line">;
         return (
           <Line
             key={key}
             data={{
-              ...lineColored,
-              datasets: lineColored.datasets.map(ds => ({
+              ...lineData,
+              datasets: lineData.datasets.map(ds => ({
                 ...ds,
                 fill: chartType === "area",
               })),
@@ -81,9 +76,9 @@ const ChartPreview = forwardRef<ChartJS, ChartPreviewProps>(
         );
       }
       case "scatter":
-        return <Scatter key={key} data={asType<"scatter">(colored)} {...commonProps} />;
+        return <Scatter key={key} data={colored as unknown as ChartData<"scatter">} {...commonProps} />;
       case "doughnut":
-        return <Doughnut key={key} data={asType<"doughnut">(colored)} {...commonProps} />;
+        return <Doughnut key={key} data={colored as unknown as ChartData<"doughnut">} {...commonProps} />;
       default:
         return null;
     }
