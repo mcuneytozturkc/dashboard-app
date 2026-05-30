@@ -1,141 +1,101 @@
 import * as XLSX from "xlsx";
 import type { ChartType } from "../model/ChartTemplate";
+import type { AppChartData } from "../types/chart";
+import { DEFAULT_COLORS } from "../types/chart";
+import { ChartParseError } from "../errors/ChartParseError";
 
-// Hataları detaylı gösteren, esnek Excel okuma fonksiyonu
 export async function parseExcelToChartData(
-    file: File,
-    chartType: ChartType
-): Promise<any> {
-    // Okuma fonksiyonunu seç (arrayBuffer ya da binaryString)
-    const tryParse = (
-        readerType: "arraybuffer" | "binarystring"
-    ): Promise<any> =>
-        new Promise((resolve, reject) => {
-            const reader = new FileReader();
+  file: File,
+  chartType: ChartType
+): Promise<AppChartData> {
+  const tryParse = (readerType: "arraybuffer" | "binarystring"): Promise<AppChartData> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
 
-            reader.onload = (e) => {
-                let data = e.target?.result;
-                if (!data) {
-                    reject("Dosya okunamadı.");
-                    return;
-                }
+      reader.onload = (e) => {
+        const data = e.target?.result;
+        if (!data) { reject(new ChartParseError("EMPTY_FILE")); return; }
 
-                try {
-                    // read tipine göre XLSX ayarı
-                    let workbook;
-                    if (readerType === "arraybuffer") {
-                        workbook = XLSX.read(data, { type: "array" });
-                    } else {
-                        workbook = XLSX.read(data, { type: "binary" });
-                    }
-
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-                    if (!Array.isArray(jsonData) || jsonData.length === 0) {
-                        reject("Excel'de veri bulunamadı. İlk satırda başlıklar olduğuna emin olun.");
-                        return;
-                    }
-
-                    // Ortak başlıkları yakala (BÜYÜK/KÜÇÜK harfe duyarlı olmasın)
-                    const firstRow = jsonData[0] as Record<string, any>;
-                    const keys = Object.keys(firstRow).map((k) => k.toLowerCase());
-
-                    // Bar, Line, Pie için
-                    if (["bar", "line", "pie", "area", "doughnut"].includes(chartType)) {
-                        const catKey = Object.keys(firstRow).find(
-                            (k) => k.toLowerCase() === "category"
-                        );
-                        const valKey = Object.keys(firstRow).find(
-                            (k) => k.toLowerCase() === "value"
-                        );
-                        if (!catKey || !valKey) {
-                            reject(
-                                'Excel formatı hatalı: Başlıklarınızda "Category" ve "Value" sütunları olmalı. (Büyük/küçük harf duyarlı değildir.)'
-                            );
-                            return;
-                        }
-                        resolve({
-                            labels: jsonData.map((row: any) => row[catKey]),
-                            datasets: [
-                                {
-                                    label: "Excel Data",
-                                    data: jsonData.map((row: any) => Number(row[valKey])),
-                                    backgroundColor: "#6366f1",
-                                },
-                            ],
-                        });
-                        return;
-                    }
-
-                    // Scatter için
-                    if (chartType === "scatter") {
-                        const xKey = Object.keys(firstRow).find(
-                            (k) => k.toLowerCase() === "x"
-                        );
-                        const yKey = Object.keys(firstRow).find(
-                            (k) => k.toLowerCase() === "y"
-                        );
-                        if (!xKey || !yKey) {
-                            reject(
-                                'Scatter için "X" ve "Y" başlıkları olmalı. (Büyük/küçük harf duyarlı değildir.)'
-                            );
-                            return;
-                        }
-                        resolve({
-                            labels: [],
-                            datasets: [
-                                {
-                                    label: "Scatter Data",
-                                    data: jsonData.map((row: any) => ({
-                                        x: Number(row[xKey]),
-                                        y: Number(row[yKey]),
-                                    })),
-                                    backgroundColor: "#34d399",
-                                },
-                            ],
-                        });
-                        return;
-                    }
-
-                    // Diğer chart tipleri için ek kod ekleyebilirsin...
-
-                    reject("Seçilen grafik tipi desteklenmiyor veya örnek şablon eksik!");
-                } catch (err: any) {
-                    reject(
-                        "Excel okuma hatası! Dosya bozuk olabilir veya yanlış formatta. Hata detayı: " +
-                        (err?.message || String(err))
-                    );
-                }
-            };
-
-            reader.onerror = () => {
-                reject("Dosya okuma hatası! Dosyanın bozuk olmadığından ve bir Excel dosyası olduğundan emin olun.");
-            };
-
-            // Okuma tipine göre farklı oku
-            if (readerType === "arraybuffer") {
-                reader.readAsArrayBuffer(file);
-            } else {
-                reader.readAsBinaryString(file);
-            }
-        });
-
-    // Önce arraybuffer ile dene, hata olursa binarystring ile tekrar dene
-    try {
-        return await tryParse("arraybuffer");
-    } catch (e1) {
         try {
-            return await tryParse("binarystring");
-        } catch (e2) {
-            throw (
-                "Excel dosyası okunamadı! Yüklediğiniz dosya gerçekten bir Excel dosyası mı kontrol edin. " +
-                "Hata 1: " +
-                e1 +
-                " | Hata 2: " +
-                e2
-            );
+          const workbook = readerType === "arraybuffer"
+            ? XLSX.read(data, { type: "array" })
+            : XLSX.read(data, { type: "binary" });
+
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+
+          if (!jsonData.length) { reject(new ChartParseError("EMPTY_FILE")); return; }
+
+          const firstRow = jsonData[0];
+          const keys = Object.keys(firstRow);
+
+          // Scatter: needs X and Y columns
+          if (chartType === "scatter") {
+            const xKey = keys.find(k => k.toLowerCase() === "x");
+            const yKey = keys.find(k => k.toLowerCase() === "y");
+            if (!xKey || !yKey) { reject(new ChartParseError("MISSING_COLUMNS")); return; }
+            resolve({
+              labels: [],
+              datasets: [{
+                label: "Scatter Data",
+                data: jsonData.map(row => ({ x: Number(row[xKey]), y: Number(row[yKey]) })),
+                backgroundColor: DEFAULT_COLORS[0],
+              }],
+            });
+            return;
+          }
+
+          // Classic Category + Value (single dataset)
+          const catKey = keys.find(k => k.toLowerCase() === "category");
+          const valKey = keys.find(k => k.toLowerCase() === "value");
+          if (catKey && valKey) {
+            resolve({
+              labels: jsonData.map(row => String(row[catKey] ?? "")),
+              datasets: [{
+                label: "Excel Data",
+                data: jsonData.map(row => Number(row[valKey])),
+                backgroundColor: DEFAULT_COLORS[0],
+              }],
+            });
+            return;
+          }
+
+          // Multi-dataset: first column = labels, remaining numeric columns = datasets
+          const labelKey = keys[0];
+          const valueKeys = keys.slice(1).filter(k =>
+            jsonData.some(row => !isNaN(Number(row[k])))
+          );
+          if (!valueKeys.length) { reject(new ChartParseError("MISSING_COLUMNS")); return; }
+
+          resolve({
+            labels: jsonData.map(row => String(row[labelKey] ?? "")),
+            datasets: valueKeys.map((k, i) => ({
+              label: k,
+              data: jsonData.map(row => Number(row[k])),
+              backgroundColor: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+              borderColor: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+            })),
+          });
+        } catch {
+          reject(new ChartParseError("CORRUPT_FILE"));
         }
+      };
+
+      reader.onerror = () => reject(new ChartParseError("CORRUPT_FILE"));
+      if (readerType === "arraybuffer") {
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.readAsBinaryString(file);
+      }
+    });
+
+  try {
+    return await tryParse("arraybuffer");
+  } catch {
+    try {
+      return await tryParse("binarystring");
+    } catch (e2) {
+      throw e2 instanceof ChartParseError ? e2 : new ChartParseError("CORRUPT_FILE");
     }
+  }
 }

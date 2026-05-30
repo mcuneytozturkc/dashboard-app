@@ -1,182 +1,183 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { chartTemplates, type ChartType } from "../model/ChartTemplate";
 import { parseExcelToChartData } from "../services/excelToChart.service";
+import { exportChartToExcel } from "../services/exportToExcel.service";
+import { exportChartToPdf } from "../services/exportToPdf.service";
+import { trackEvent } from "../services/analytics.service";
 import ChartPreview from "../components/ChartPreview";
-import {
-    Chart as ChartJS,
-    BarElement,
-    LineElement,
-    PointElement,
-    ArcElement,
-    CategoryScale,
-    LinearScale,
-    Tooltip,
-    Legend,
-    Filler,
-} from "chart.js";
-
-// KAYIT (register) ET
-ChartJS.register(
-    BarElement,
-    LineElement,
-    PointElement,
-    ArcElement,
-    CategoryScale,
-    LinearScale,
-    Tooltip,
-    Legend,
-    Filler
-);
+import FileDropzone from "../components/FileDropzone";
+import ChartCustomizationPanel from "../components/ChartCustomizationPanel";
+import DataEditor from "../components/DataEditor";
+import { useChartPage } from "../hooks/useChartPage";
+import { type ChartCustomization, DEFAULT_CUSTOMIZATION } from "../types/chart";
 
 export default function ExcelToChartPage() {
-    const { t } = useTranslation();
-    const fileInput = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
+  const [customization, setCustomization] = useState<ChartCustomization>(DEFAULT_CUSTOMIZATION);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
-    const [selectedChart, setSelectedChart] = useState<ChartType>("bar");
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [chartData, setChartData] = useState<any>(null);
-    const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState("");
+  const {
+    selectedChart, setSelectedChart, selectedFile, chartData,
+    rawData, showEditor,
+    loading, message, isError, chartRef,
+    handleFileChange, handleCreateChart,
+    handleConfirmEdit, handleCancelEdit, handleDownloadChart,
+  } = useChartPage(parseExcelToChartData);
 
-    // Dosya seçimi
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setMessage("");
-        const file = e.target.files?.[0];
-        if (file) setSelectedFile(file);
-    };
-    const chartRef = useRef<any>(null);
+  const handleDownloadExcel = async () => {
+    if (!chartData) return;
+    trackEvent("chart_exported", { exportType: "excel" });
+    await exportChartToExcel(chartData, customization, chartRef.current?.canvas ?? null);
+  };
 
-    const handleDownloadChart = () => {
-        if (!chartRef.current) return;
-        const chartInstance = chartRef.current;
-        const canvas = chartInstance.canvas || chartInstance.canvasEl;
-        if (canvas && canvas.toDataURL) {
-            const url = canvas.toDataURL("image/png");
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "chart.png";
-            a.click();
-        } else {
-            alert("Grafik bulunamadı!");
-        }
-    };
+  const handleDownloadPdf = async () => {
+    const canvas = chartRef.current?.canvas;
+    if (!chartData || !canvas) return;
+    setPdfLoading(true);
+    try {
+      trackEvent("chart_exported", { exportType: "pdf" });
+      await exportChartToPdf(canvas, chartData, customization);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
+  const handleConfirmWithTracking = (data: NonNullable<typeof rawData>) => {
+    handleConfirmEdit(data);
+    trackEvent("chart_generated", {
+      chartType: selectedChart,
+      datasetCount: data.datasets.length,
+      rowCount: data.labels.length,
+    });
+  };
 
-    // Chart oluşturma
-    const handleCreateChart = async () => {
-        if (!selectedFile) {
-            setMessage(t("file_not_supported"));
-            return;
-        }
-        setLoading(true);
-        setMessage("");
-        try {
-            const data = await parseExcelToChartData(selectedFile, selectedChart);
-            setChartData(data);
-            setMessage(t("chart_generation_success"));
-        } catch (err) {
-            setMessage(typeof err === "string" ? err : t("file_not_supported"));
-        }
-        setLoading(false);
-    };
+  const templateFile = chartTemplates.find(ct => ct.type === selectedChart)?.file.excel;
 
-    return (
-        <div className="
-            flex flex-col min-h-[calc(100vh-4rem)] items-center justify-center
-            bg-gradient-to-br from-indigo-100 to-white
-            dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800
-        ">
-            {/* Başlık */}
-            <h1 className="text-2xl font-bold mb-2 dark:text-white">{t("excel")}</h1>
-            <p className="text-gray-600 dark:text-white mb-6">{t("description")}</p>
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] items-center justify-center
+      bg-gradient-to-br from-indigo-100 to-white
+      dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 px-4 py-8">
 
-            {/* Grafik Tipi Seçici */}
-            <div className="flex gap-4 mb-6 flex-wrap">
-                {chartTemplates.map((ct) => (
-                    <button
-                        key={ct.type}
-                        type="button"
-                        className={`flex flex-col items-center border rounded-lg px-5 py-3 cursor-pointer transition
-                        ${selectedChart === ct.type
-                                ? "border-indigo-600 shadow-lg bg-indigo-50 dark:bg-gray-800 dark:text-white dark:border-indigo-400"
-                                : "border-gray-200 hover:border-indigo-300 bg-white dark:text-white dark:bg-gray-900 dark:border-gray-700 dark:hover:border-indigo-500"
-                            }`}
-                        onClick={() => setSelectedChart(ct.type)}
-                    >
-                        <span className="font-semibold mb-2">{ct.label}</span>
-                    </button>
-                ))}
-            </div>
+      <h1 className="text-2xl font-bold mb-2 dark:text-white">{t("excel")}</h1>
+      <p className="text-gray-600 dark:text-white mb-6 text-center max-w-lg">{t("description")}</p>
 
-            {/* Seçili grafik tipine uygun şablon indir butonu */}
-            <div className="mb-6">
-                <a
-                    href={chartTemplates.find(ct => ct.type === selectedChart)?.file.excel}
-                    download
-                    className="inline-block px-4 py-2 rounded bg-indigo-600 text-white text-xs font-semibold shadow hover:bg-indigo-700 transition"
-                >
-                    Excel {t("download_chart")}
-                </a>
-            </div>
+      {/* Chart type selector */}
+      <div className="flex gap-3 mb-6 flex-wrap justify-center">
+        {chartTemplates.map((ct) => (
+          <button
+            key={ct.type}
+            type="button"
+            className={`flex flex-col items-center border rounded-lg px-5 py-3 cursor-pointer transition
+              ${selectedChart === ct.type
+                ? "border-indigo-600 shadow-lg bg-indigo-50 dark:bg-gray-800 dark:text-white dark:border-indigo-400"
+                : "border-gray-200 hover:border-indigo-300 bg-white dark:text-white dark:bg-gray-900 dark:border-gray-700 dark:hover:border-indigo-500"
+              }`}
+            onClick={() => setSelectedChart(ct.type as ChartType)}
+          >
+            <span className="font-semibold">{ct.label}</span>
+          </button>
+        ))}
+      </div>
 
-            {/* Dosya Yükleme */}
-            <div className="relative flex flex-col sm:flex-row gap-3 items-center">
-                <input
-                    id="file-upload"
-                    ref={fileInput}
-                    type="file"
-                    accept=".xlsx, .xls"
-                    onChange={handleFileChange}
-                    className="hidden"
-                />
-                <label
-                    htmlFor="file-upload"
-                    className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded cursor-pointer font-semibold hover:bg-indigo-100 transition dark:bg-gray-800 dark:text-indigo-300 dark:hover:bg-gray-700"
-                >
-                    {t("choose_file")}
-                </label>
-                <span className="text-sm text-gray-400 dark:text-gray-300">
-                    {selectedFile ? selectedFile.name : t("no_file_selected")}
-                </span>
-                <button
-                    className="ml-0 sm:ml-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-                    onClick={handleCreateChart}
-                    disabled={loading}
-                >
-                    {loading ? t("file_processing") : t("generate_chart")}
-                </button>
-                {chartData && (
-                    <button
-                        className="ml-0 sm:ml-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-                        disabled={loading}
-                        onClick={handleDownloadChart}
-                    >
-                        {loading ? t("file_processing") : t("download_chart_png")}
-                    </button>
-                )}
-            </div>
+      {/* Template download */}
+      <div className="mb-6">
+        <a href={templateFile} download
+          className="inline-block px-4 py-2 rounded bg-indigo-600 text-white text-xs font-semibold shadow hover:bg-indigo-700 transition">
+          Excel {t("download_chart")}
+        </a>
+      </div>
 
-            {message && (
-                <div className={`mb-4 text-sm ${message.toLowerCase().includes("hata") ? "text-red-500" : "text-green-600"}`}>
-                    {message}
-                </div>
-            )}
+      {/* File dropzone */}
+      <div className="w-full max-w-md mb-4">
+        <FileDropzone
+          accept={[".xlsx", ".xls"]}
+          onFileSelect={(file) => {
+            handleFileChange(file);
+            trackEvent("file_uploaded", { fileType: "excel", fileSizeMB: +(file.size / (1024 * 1024)).toFixed(2) });
+          }}
+          label=".xlsx, .xls"
+          isLoading={loading}
+          selectedFile={selectedFile}
+        />
+      </div>
 
+      {/* Generate + action buttons */}
+      <div className="flex flex-wrap gap-2 justify-center mb-4">
+        <button
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition disabled:opacity-50"
+          onClick={handleCreateChart}
+          disabled={loading}
+        >
+          {loading ? t("file_processing") : t("generate_chart")}
+        </button>
+        {chartData && (
+          <>
+            <button
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+              onClick={handleDownloadChart}
+            >{t("download_chart_png")}</button>
+            <button
+              className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition"
+              onClick={handleDownloadExcel}
+            >{t("download_chart_excel")}</button>
+            <button
+              className="px-4 py-2 bg-rose-600 text-white rounded hover:bg-rose-700 transition disabled:opacity-50"
+              onClick={handleDownloadPdf}
+              disabled={pdfLoading}
+            >{pdfLoading ? t("file_processing") : t("download_chart_pdf")}</button>
+          </>
+        )}
+      </div>
 
-
-            {/* Grafik Önizleme */}
-            <div className="bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded p-5 mt-6 w-full h-[350px] flex items-center justify-center transition-colors">
-                <div className="w-full h-full">
-                    <ChartPreview
-                        ref={chartRef}
-                        chartType={selectedChart}
-                        chartData={chartData}
-                        noDataText={t("chart_not_available")}
-                    />
-                </div>
-            </div>
-
+      {/* Message */}
+      {message && (
+        <div className={`mb-2 text-sm text-center ${isError ? "text-red-500 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+          {message}
+          {isError && templateFile && (
+            <span className="ml-2">
+              <a href={templateFile} download className="underline hover:no-underline">
+                {t("download_template")}
+              </a>
+            </span>
+          )}
         </div>
-    );
+      )}
+
+      {/* Customization panel */}
+      {chartData && (
+        <div className="w-full max-w-2xl">
+          <ChartCustomizationPanel
+            customization={customization}
+            onChange={setCustomization}
+            datasetCount={chartData.datasets.length}
+            chartType={selectedChart}
+          />
+        </div>
+      )}
+
+      {/* Chart preview */}
+      <div className="bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 rounded p-5 mt-2 w-full max-w-2xl h-[350px] flex items-center justify-center transition-colors">
+        <div className="w-full h-full">
+          <ChartPreview
+            ref={chartRef}
+            chartType={selectedChart}
+            chartData={chartData}
+            noDataText={t("chart_not_available")}
+            customization={customization}
+          />
+        </div>
+      </div>
+
+      {/* Data Editor modal */}
+      {showEditor && rawData && (
+        <DataEditor
+          rawData={rawData}
+          chartType={selectedChart}
+          onConfirm={handleConfirmWithTracking}
+          onCancel={handleCancelEdit}
+        />
+      )}
+    </div>
+  );
 }

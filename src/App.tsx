@@ -17,8 +17,13 @@ function App() {
   useEffect(() => {
     localStorage.setItem("darkMode", darkMode ? "true" : "false");
   }, [darkMode]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [darkMode]);
+
   return (
-    <div className={darkMode ? "dark min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors" : "min-h-screen bg-gray-100 transition-colors"}>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
       <BrowserRouter>
         <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
         <Routes>
