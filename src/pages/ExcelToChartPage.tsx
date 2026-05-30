@@ -4,7 +4,6 @@ import { chartTemplates, type ChartType } from "../model/ChartTemplate";
 import { parseExcelToChartData } from "../services/excelToChart.service";
 import { exportChartToExcel } from "../services/exportToExcel.service";
 import { exportChartToPdf } from "../services/exportToPdf.service";
-import { trackEvent } from "../services/analytics.service";
 import ChartPreview from "../components/ChartPreview";
 import FileDropzone from "../components/FileDropzone";
 import ChartCustomizationPanel from "../components/ChartCustomizationPanel";
@@ -27,7 +26,6 @@ export default function ExcelToChartPage() {
 
   const handleDownloadExcel = async () => {
     if (!chartData) return;
-    trackEvent("chart_exported", { exportType: "excel" });
     await exportChartToExcel(chartData, customization, chartRef.current?.canvas ?? null);
   };
 
@@ -36,7 +34,6 @@ export default function ExcelToChartPage() {
     if (!chartData || !canvas) return;
     setPdfLoading(true);
     try {
-      trackEvent("chart_exported", { exportType: "pdf" });
       await exportChartToPdf(canvas, chartData, customization);
     } finally {
       setPdfLoading(false);
@@ -45,11 +42,6 @@ export default function ExcelToChartPage() {
 
   const handleConfirmWithTracking = (data: NonNullable<typeof rawData>) => {
     handleConfirmEdit(data);
-    trackEvent("chart_generated", {
-      chartType: selectedChart,
-      datasetCount: data.datasets.length,
-      rowCount: data.labels.length,
-    });
   };
 
   const templateFile = chartTemplates.find(ct => ct.type === selectedChart)?.file.excel;
@@ -92,10 +84,7 @@ export default function ExcelToChartPage() {
       <div className="w-full max-w-md mb-4">
         <FileDropzone
           accept={[".xlsx", ".xls"]}
-          onFileSelect={(file) => {
-            handleFileChange(file);
-            trackEvent("file_uploaded", { fileType: "excel", fileSizeMB: +(file.size / (1024 * 1024)).toFixed(2) });
-          }}
+          onFileSelect={handleFileChange}
           label=".xlsx, .xls"
           isLoading={loading}
           selectedFile={selectedFile}

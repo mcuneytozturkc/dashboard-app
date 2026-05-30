@@ -4,7 +4,6 @@ import { chartTemplates, type ChartType } from "../model/ChartTemplate";
 import { parsePdfToChartData } from "../services/pdfToChart.service";
 import { exportChartToExcel } from "../services/exportToExcel.service";
 import { exportChartToPdf } from "../services/exportToPdf.service";
-import { trackEvent } from "../services/analytics.service";
 import ChartPreview from "../components/ChartPreview";
 import FileDropzone from "../components/FileDropzone";
 import ChartCustomizationPanel from "../components/ChartCustomizationPanel";
@@ -36,7 +35,6 @@ export default function PdfToChartPage() {
     setShowTableSelector(false);
     if (!selectedFile) return;
     parseAndEdit(parsePdfToChartData(selectedFile, selectedChart, tableIndex));
-    trackEvent("file_uploaded", { fileType: "pdf", fileSizeMB: +(selectedFile.size / (1024 * 1024)).toFixed(2) });
   };
 
   const handleSkipSelector = () => {
@@ -47,7 +45,6 @@ export default function PdfToChartPage() {
 
   const handleDownloadExcel = async () => {
     if (!chartData) return;
-    trackEvent("chart_exported", { exportType: "excel" });
     await exportChartToExcel(chartData, customization, chartRef.current?.canvas ?? null);
   };
 
@@ -56,7 +53,6 @@ export default function PdfToChartPage() {
     if (!chartData || !canvas) return;
     setPdfLoading(true);
     try {
-      trackEvent("chart_exported", { exportType: "pdf" });
       await exportChartToPdf(canvas, chartData, customization);
     } finally {
       setPdfLoading(false);
@@ -65,11 +61,6 @@ export default function PdfToChartPage() {
 
   const handleConfirmWithTracking = (data: NonNullable<typeof rawData>) => {
     handleConfirmEdit(data);
-    trackEvent("chart_generated", {
-      chartType: selectedChart,
-      datasetCount: data.datasets.length,
-      rowCount: data.labels.length,
-    });
   };
 
   const templateFile = chartTemplates.find(ct => ct.type === selectedChart)?.file.pdf;
