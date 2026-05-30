@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { Bar, Pie, Line, Scatter, Doughnut } from "react-chartjs-2";
-import type { Chart as ChartJS, ChartDataset, ChartOptions } from "chart.js";
+import type { Chart as ChartJS, ChartOptions, ChartData } from "chart.js";
 import type { AppChartData, ChartCustomization } from "../types/chart";
 import { DEFAULT_CUSTOMIZATION } from "../types/chart";
 
@@ -44,27 +44,34 @@ function applyColors(data: AppChartData, palette: string[]): AppChartData {
   };
 }
 
+// Cast helper — chart.js component generics require specific ChartData<"bar"> etc.
+function asType<T>(data: AppChartData): ChartData<T extends string ? T : never> {
+  return data as unknown as ChartData<T extends string ? T : never>;
+}
+
 const ChartPreview = forwardRef<ChartJS, ChartPreviewProps>(
   ({ chartType, chartData, noDataText = "No chart data", customization = DEFAULT_CUSTOMIZATION }, ref) => {
     if (!chartData) return <div className="text-gray-500">{noDataText}</div>;
 
     const colored = applyColors(chartData, customization.colorPalette);
     const options = buildOptions(chartType, customization);
+    const key = chartType + JSON.stringify(chartData);
     const commonProps = { options, height: 320, ref };
 
     switch (chartType) {
       case "bar":
-        return <Bar key={chartType + JSON.stringify(chartData)} data={colored} {...commonProps} />;
+        return <Bar key={key} data={asType<"bar">(colored)} {...commonProps} />;
       case "pie":
-        return <Pie key={chartType + JSON.stringify(chartData)} data={colored} {...commonProps} />;
+        return <Pie key={key} data={asType<"pie">(colored)} {...commonProps} />;
       case "line":
-      case "area":
+      case "area": {
+        const lineColored = asType<"line">(colored);
         return (
           <Line
-            key={chartType + JSON.stringify(chartData)}
+            key={key}
             data={{
-              ...colored,
-              datasets: colored.datasets.map((ds: ChartDataset) => ({
+              ...lineColored,
+              datasets: lineColored.datasets.map(ds => ({
                 ...ds,
                 fill: chartType === "area",
               })),
@@ -72,10 +79,11 @@ const ChartPreview = forwardRef<ChartJS, ChartPreviewProps>(
             {...commonProps}
           />
         );
+      }
       case "scatter":
-        return <Scatter key={chartType + JSON.stringify(chartData)} data={colored} {...commonProps} />;
+        return <Scatter key={key} data={asType<"scatter">(colored)} {...commonProps} />;
       case "doughnut":
-        return <Doughnut key={chartType + JSON.stringify(chartData)} data={colored} {...commonProps} />;
+        return <Doughnut key={key} data={asType<"doughnut">(colored)} {...commonProps} />;
       default:
         return null;
     }

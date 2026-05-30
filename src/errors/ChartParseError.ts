@@ -6,8 +6,11 @@ export type ChartParseErrorCode =
   | "NO_TABLE_FOUND";
 
 export class ChartParseError extends Error {
-  constructor(public code: ChartParseErrorCode) {
+  code: ChartParseErrorCode;
+
+  constructor(code: ChartParseErrorCode) {
     super(code);
     this.name = "ChartParseError";
+    this.code = code;
   }
 }
